@@ -4,6 +4,10 @@ public class Creator : MonoBehaviour
 {
     private readonly Quaternion _rotation = Quaternion.Euler(0, 0, -90);
 
+    private Quaternion _dragedObjQ;
+
+    private GameObject _dragedObj;
+
     public Material[] Grass;
 
     public Sprite[] Background;
@@ -14,7 +18,7 @@ public class Creator : MonoBehaviour
 
     public GameObject BackgroundQuad;
 
-    public int CubeNumber;
+    public bool Delete;
 
     public Camera Camera;
 
@@ -31,24 +35,37 @@ public class Creator : MonoBehaviour
 	
 	// Update is called once per frame
 	void Update () {
-	    if (Input.GetButtonDown("mouse 0"))
+	    if (Input.GetButton("mouse 0"))
 	    {
             RaycastHit hit;
-	        Ray ray = Camera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out hit, 100f, 1<<8) && CubeNumber != -1)
-            {
-                Vector3 hitPos = hit.point;
-                Instantiate(Cubes[CubeNumber], hitPos, Rotate ? _rotation : Quaternion.identity);
-            }
-            if (Physics.Raycast(ray, out hit, 100f, 1<<9) && CubeNumber == -1)
+            Ray ray = Camera.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out hit, 100f, 1 << 9) && !Delete && _dragedObj == null)
             {
                 var hitObj = hit.transform.gameObject;
-                while (hitObj.transform.parent != null)
-                {
-                    hitObj = hitObj.transform.parent.gameObject;
-                }
-                Destroy(hitObj);
+                hitObj = hitObj.transform.parent.gameObject;
+                _dragedObj = hitObj;
+                _dragedObj.GetComponent<Rigidbody2D>().angularVelocity = 0;
+                _dragedObjQ = _dragedObj.transform.rotation;
             }
+            if (Physics.Raycast(ray, out hit, 100f, 1 << 8) && !Delete && _dragedObj != null)
+            {
+                _dragedObj.transform.rotation = _dragedObjQ;
+                _dragedObj.transform.position = new Vector3(hit.point.x, hit.point.y, 4);
+            }
+	        if (Physics.Raycast(ray, out hit, 100f, 1 << 9) && Delete)
+	        {
+	            var hitObj = hit.transform.gameObject;
+	            hitObj = hitObj.transform.parent.gameObject;
+	            Destroy(hitObj);
+	        }
+	    }
+	    else
+	    {
+	        if (_dragedObj != null)
+	        {
+                _dragedObj.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+                _dragedObj = null;
+	        }
 	    }
 	}
 
@@ -59,5 +76,16 @@ public class Creator : MonoBehaviour
         BackgroundQuad.GetComponent<SpriteRenderer>().sprite = Background[IsSun ? 1 : 0];
         Music[IsSun ? 0 : 1].GetComponent<AudioSource>().Stop();
         Music[IsSun ? 1 : 0].GetComponent<AudioSource>().Play();
+    }
+
+    public void Create(GameObject obj)
+    {
+        RaycastHit hit;
+        Ray ray = Camera.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out hit, 100f, 1 << 8))
+        {
+            Delete = false;
+            Instantiate(obj, hit.point, Rotate ? _rotation : Quaternion.identity);
+        }
     }
 }
