@@ -39,10 +39,13 @@ public class Creator : MonoBehaviour
 	}
 	
 	// Update is called once per frame
+    private bool _oldAlign;
+    private GameObject _alignedObj;
 	void Update () {
-	    if (Input.GetButton("mouse 0"))
+        bool isAlign = false;
+        if (Input.GetButton("mouse 0"))
 	    {
-            RaycastHit hit;
+	        RaycastHit hit;
             Ray ray = Camera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out hit, 100f, 1 << 9) && !Delete && _dragedObj == null)
             {
@@ -51,25 +54,27 @@ public class Creator : MonoBehaviour
                 _dragedObj = hitObj;
                 _dragedObj.GetComponent<Rigidbody2D>().angularVelocity = 0;
                 _dragedObjQ = _dragedObj.transform.rotation;
+                _dragedObj.layer = 0;
             }
             if (Physics.Raycast(ray, out hit, 100f, 1 << 8) && !Delete && _dragedObj != null)
             {
-                //_dragedObj.transform.rotation = _dragedObjQ;
+                RaycastHit2D alignHit = Physics2D.Raycast(_dragedObj.transform.position , -Vector2.up, 100f, 1 << 10);
+                if (alignHit.collider != null) 
+                {
+                    var hitObj = alignHit.transform.gameObject;
+                    var differens = hitObj.transform.position - _dragedObj.transform.position;
+                    if (Mathf.Abs(differens.x) < 0.3 && Mathf.Abs(differens.y) < 3)
+                    {
+                        isAlign = true;
+                        _alignedObj = hitObj;
+                        _dragedObj.transform.position = new Vector3(hitObj.transform.position.x,
+                            _dragedObj.transform.position.y, 4);
+                    }
+                }
                 _dragedObj.GetComponent<Rigidbody2D>().velocity = (hit.point - _dragedObj.transform.position) * 20;
             }
 	        if (_dragedObj != null)
 	        {
-                RaycastHit alignHit;
-                if (Physics.Raycast(_dragedObj.transform.position, -Vector3.up, out alignHit, 100f, 1 << 10))
-                {
-                    var hitObj = alignHit.transform.parent; 
-                    var differens = hitObj.transform.position - _dragedObj.transform.position;
-                    if (Mathf.Abs(differens.x) < 0.5 && Mathf.Abs(differens.y) < 3)
-                    {
-                        _dragedObj.transform.position = new Vector3(hit.transform.position.x,
-                            _dragedObj.transform.position.y, 4);
-                    }
-                }
 	            if (Math.Abs(Input.GetAxis("Horizontal")) < 0.1)
                 {
                     _dragedObj.GetComponent<Rigidbody2D>().angularVelocity = 0;
@@ -92,12 +97,22 @@ public class Creator : MonoBehaviour
 	    {
 	        if (_dragedObj != null)
 	        {
-                
-                _dragedObj.GetComponent<Rigidbody2D>().velocity /= 3;
-                _dragedObj.GetComponent<Rigidbody2D>().angularVelocity = 0;
+	            _dragedObj.layer = 10;
+	            if (_oldAlign)
+	            {
+                    _dragedObj.transform.position = new Vector3(_alignedObj.transform.position.x,
+                            _dragedObj.transform.position.y, 4);
+                    _dragedObj.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+                }
+	            else
+	            {
+                    _dragedObj.GetComponent<Rigidbody2D>().velocity /= 3;
+	            }
+	            _dragedObj.GetComponent<Rigidbody2D>().angularVelocity = 0;
 	        }
             _dragedObj = null;
 	    }
+	    _oldAlign = isAlign;
 	}
 
     public void SunChange()
